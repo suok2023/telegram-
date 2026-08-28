@@ -1,4 +1,3 @@
-import os
 import asyncio
 import time
 import random
@@ -14,9 +13,7 @@ from tronpy.keys import PrivateKey as TronPrivateKey
 from bit import Key as BitKey
 
 # ======================== تنظیمات ========================
-TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
-if not TELEGRAM_TOKEN:
-    raise ValueError("TELEGRAM_TOKEN environment variable not set")
+TELEGRAM_TOKEN = "8913835905:AAHnXsmjJB1WZVfoGf9ExJjqVpF0XaMp9WA"
 
 DERIVATION_DEPTH = 5
 BATCH_SIZE = 4
